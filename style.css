@@ -1,0 +1,37 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    text-align: center;
+}
+.upload-area {
+    margin: 20px auto;
+    padding: 20px;
+    border: 2px dashed #ccc;
+    width: 80%;
+    max-width: 600px;
+    cursor: pointer;
+}
+.upload-area:hover {
+    background-color: #f9f9f9;
+}
+#canvas-container {
+    position: relative;
+    display: inline-block;
+    margin-top: 20px;
+}
+canvas {
+    border: 1px solid #000;
+}
+.output {
+    margin-top: 20px;
+}
+.output img {
+    margin: 5px;
+    border: 1px solid #ddd;
+}
+button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
