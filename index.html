@@ -7,16 +7,16 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h2>Cropper</h2>
+    <h1>PDF & Image Cropper</h1>
     <div class="upload-area" id="upload-area">
-        Drag and drop here or click to upload.
-        <input type="file" id="file-input" accept="image/*" style="display:none;">
+        Drag and drop a file here or click to upload.
+        <input type="file" id="file-input" accept="image/*,application/pdf" style="display:none;">
     </div>
-    <div id="canvas-container">
-        <canvas id="image-canvas"></canvas>
-    </div><br>
-    <button id="crop-button">Crop</button>
+    <div id="pdf-container"></div><br>
+    <button id="crop-button" style="display: none;" aling = "center">Crop</button>
     <div class="output" id="output"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

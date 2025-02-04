@@ -1,93 +1,115 @@
 const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('file-input');
-        const canvas = document.getElementById('image-canvas');
-        const cropButton = document.getElementById('crop-button');
-        const output = document.getElementById('output');
+const fileInput = document.getElementById('file-input');
+const pdfContainer = document.getElementById('pdf-container');
+const output = document.getElementById('output');
+const cropButton = document.getElementById('crop-button');
+let startX, startY, endX, endY;
+let cropping = false;
+let activeCanvas = null;
+let cropArea = document.createElement('div');
+cropArea.classList.add('crop-area');
+document.body.appendChild(cropArea);
+
+uploadArea.addEventListener('click', () => fileInput.click());
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.style.backgroundColor = '#e3e3e3';
+});
+uploadArea.addEventListener('dragleave', () => uploadArea.style.backgroundColor = '');
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.style.backgroundColor = '';
+    handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+function handleFile(file) {
+    if (!file) return;
+    if (file.type === 'application/pdf') {
+        const reader = new FileReader();
+        reader.onload = () => renderPDF(new Uint8Array(reader.result));
+        reader.readAsArrayBuffer(file);
+    } else if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => loadImage(e.target.result);
+        reader.readAsDataURL(file);
+    }
+}
+
+function loadImage(src) {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        canvas.addEventListener('mousedown', startSelection);
+        pdfContainer.appendChild(canvas);
+        cropButton.style.display = 'block';
+    };
+}
 
-        let image = new Image();
-        let cropping = false;
-        let startX, startY, endX, endY;
+async function renderPDF(pdfData) {
+    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+    pdfContainer.innerHTML = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const viewport = page.getViewport({ scale: 1.5 });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        canvas.addEventListener('mousedown', startSelection);
+        pdfContainer.appendChild(canvas);
+    }
+    cropButton.style.display = 'block';
+}
 
-        uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.style.backgroundColor = '#e3e3e3';
-        });
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.style.backgroundColor = '';
-        });
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.style.backgroundColor = '';
-            handleFile(e.dataTransfer.files[0]);
-        });
+function startSelection(event) {
+    activeCanvas = event.target;
+    cropping = true;
+    startX = event.offsetX;
+    startY = event.offsetY;
+    cropArea.style.display = 'block';
+    cropArea.style.left = event.pageX + 'px';
+    cropArea.style.top = event.pageY + 'px';
+    cropArea.style.width = '0px';
+    cropArea.style.height = '0px';
+}
 
-        fileInput.addEventListener('change', (e) => {
-            handleFile(e.target.files[0]);
-        });
+document.addEventListener('mousemove', (event) => {
+    if (!cropping) return;
+    cropArea.style.width = Math.abs(event.pageX - parseInt(cropArea.style.left)) + 'px';
+    cropArea.style.height = Math.abs(event.pageY - parseInt(cropArea.style.top)) + 'px';
+});
 
-        function handleFile(file) {
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                image.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
+document.addEventListener('mouseup', () => {
+    cropping = false;
+});
 
-        image.onload = () => {
-            canvas.width = image.width;
-            canvas.height = image.height;
-            ctx.drawImage(image, 0, 0);
-        };
+cropButton.addEventListener('click', () => {
+    if (!activeCanvas || startX == null || startY == null) {
+        alert('Please select an area to crop!');
+        return;
+    }
+    cropSelectedArea(activeCanvas, startX, startY, parseInt(cropArea.style.width), parseInt(cropArea.style.height));
+});
 
-        canvas.addEventListener('mousedown', (e) => {
-            cropping = true;
-            startX = e.offsetX;
-            startY = e.offsetY;
-        });
-
-        canvas.addEventListener('mouseup', (e) => {
-            cropping = false;
-            endX = e.offsetX;
-            endY = e.offsetY;
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (!cropping) return;
-            ctx.drawImage(image, 0, 0);
-            ctx.beginPath();
-            ctx.rect(startX, startY, e.offsetX - startX, e.offsetY - startY);
-            ctx.strokeStyle = 'red';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        });
-
-        cropButton.addEventListener('click', () => {
-            if (startX == null || startY == null || endX == null || endY == null) {
-                alert('Please select an area to crop!');
-                return;
-            }
-
-            const width = endX - startX;
-            const height = endY - startY;
-
-            const croppedCanvas = document.createElement('canvas');
-            croppedCanvas.width = Math.abs(width);
-            croppedCanvas.height = Math.abs(height);
-            const croppedCtx = croppedCanvas.getContext('2d');
-            croppedCtx.drawImage(
-                canvas,
-                startX, startY,
-                width, height,
-                0, 0,
-                Math.abs(width), Math.abs(height)
-            );
-
-            const croppedImage = new Image();
-            croppedImage.src = croppedCanvas.toDataURL();
-            output.appendChild(croppedImage);
-
-            startX = startY = endX = endY = null;
-        });
+function cropSelectedArea(canvas, startX, startY, width, height) {
+    if (width === 0 || height === 0) {
+        alert('Please select a valid area to crop.');
+        return;
+    }
+    const croppedCanvas = document.createElement('canvas');
+    croppedCanvas.width = width;
+    croppedCanvas.height = height;
+    const croppedCtx = croppedCanvas.getContext('2d');
+    croppedCtx.drawImage(canvas, startX, startY, width, height, 0, 0, width, height);
+    const croppedImage = new Image();
+    croppedImage.src = croppedCanvas.toDataURL();
+    output.appendChild(croppedImage);
+    cropArea.style.display = 'none';
+}

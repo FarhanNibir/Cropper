@@ -1,6 +1,5 @@
 body {
     font-family: Arial, sans-serif;
-    margin: 20px;
     text-align: center;
 }
 .upload-area {
@@ -14,20 +13,23 @@ body {
 .upload-area:hover {
     background-color: #f9f9f9;
 }
-#canvas-container {
-    position: relative;
-    display: inline-block;
+#pdf-container, .output {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
     margin-top: 20px;
+    position: relative;
 }
 canvas {
     border: 1px solid #000;
+    position: relative;
 }
-.output {
-    margin-top: 20px;
-}
-.output img {
-    margin: 5px;
-    border: 1px solid #ddd;
+.crop-area {
+    position: absolute;
+    border: 2px dashed red;
+    background: rgba(255, 0, 0, 0.2);
+    display: none;
 }
 button {
     margin-top: 10px;
