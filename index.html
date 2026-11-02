@@ -3,22 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cropper</title>
+    <title>PDF & Image Cropper</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>PDF & Image Cropper</h1>
-    <div class="upload-area" id="upload-area">
-        Drag and drop a file here or click to upload.
-        <input type="file" id="file-input" accept="image/*,application/pdf" style="display:none;">
-    </div>
-    <div id="pdf-container"></div><br>
-    <div style="align-items: center">
-    <button id="crop-button" >Crop</button>
-    </div>
-    <div class="output" id="output"></div>
-    
+    <header class="app-header">
+        <h1>PDF &amp; Image Cropper</h1>
+        <button id="theme-btn" class="btn btn-ghost" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+    </header>
+
+    <main>
+        <div class="upload-area" id="upload-area" tabindex="0" role="button" aria-label="Upload a file">
+            <strong>Drop a file here</strong>, click to browse, or paste an image (Ctrl/Cmd + V)
+            <small id="upload-hint">Supports PNG, JPG, WebP, GIF and PDF</small>
+            <input type="file" id="file-input" accept="image/*,application/pdf" hidden>
+        </div>
+
+        <section id="workspace" hidden>
+            <div class="toolbar">
+                <div class="tool-group" aria-label="Aspect ratio">
+                    <span class="tool-label">Ratio</span>
+                    <div class="segmented" id="ratio-group">
+                        <button type="button" class="seg active" data-ratio="0">Free</button>
+                        <button type="button" class="seg" data-ratio="1">1:1</button>
+                        <button type="button" class="seg" data-ratio="1.3333333">4:3</button>
+                        <button type="button" class="seg" data-ratio="1.5">3:2</button>
+                        <button type="button" class="seg" data-ratio="1.7777778">16:9</button>
+                        <button type="button" class="seg" data-ratio="0.75">3:4</button>
+                        <button type="button" class="seg" data-ratio="0.5625">9:16</button>
+                    </div>
+                </div>
+
+                <div class="tool-group">
+                    <span class="tool-label">Zoom</span>
+                    <button id="zoom-out" class="btn btn-icon" type="button" title="Zoom out (-)">−</button>
+                    <span id="zoom-label" class="zoom-label">100%</span>
+                    <button id="zoom-in" class="btn btn-icon" type="button" title="Zoom in (+)">+</button>
+                    <button id="zoom-fit" class="btn" type="button" title="Fit to width (0)">Fit</button>
+                </div>
+
+                <div class="tool-group">
+                    <span class="tool-label">Rotate</span>
+                    <button id="rotate-left" class="btn btn-icon" type="button" title="Rotate left">⟲</button>
+                    <button id="rotate-right" class="btn btn-icon" type="button" title="Rotate right">⟳</button>
+                </div>
+
+                <div class="tool-group">
+                    <span class="tool-label">Export</span>
+                    <select id="format" aria-label="Export format">
+                        <option value="png">PNG</option>
+                        <option value="jpeg">JPEG</option>
+                        <option value="webp">WebP</option>
+                    </select>
+                    <label class="quality" id="quality-wrap">
+                        Quality <input type="range" id="quality" min="30" max="100" value="92">
+                        <span id="quality-val">92</span>
+                    </label>
+                </div>
+
+                <div class="tool-group">
+                    <span class="tool-label">OCR</span>
+                    <select id="ocr-lang" aria-label="Text language">
+                        <option value="eng">English</option>
+                        <option value="ben">Bengali</option>
+                        <option value="eng+ben">English + Bengali</option>
+                        <option value="hin">Hindi</option>
+                        <option value="ara">Arabic</option>
+                        <option value="fra">French</option>
+                        <option value="spa">Spanish</option>
+                        <option value="deu">German</option>
+                    </select>
+                    <button id="extract-btn" class="btn" type="button" title="Extract text from selection (T)">🔤 Extract text</button>
+                </div>
+
+                <div class="tool-group tool-actions">
+                    <button id="crop-button" class="btn btn-primary" type="button" title="Crop selection (Enter)">✂ Crop</button>
+                    <button id="clear-sel" class="btn" type="button" title="Clear selection (Esc)">Clear selection</button>
+                    <button id="remove-file" class="btn btn-danger" type="button">Remove file</button>
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <span id="file-info"></span>
+                <span id="sel-info">No selection</span>
+            </div>
+
+            <div id="viewer" class="viewer"></div>
+
+            <p class="shortcuts">
+                <kbd>Enter</kbd> crop · <kbd>Esc</kbd> clear · <kbd>←↑↓→</kbd> nudge (hold <kbd>Shift</kbd> for 10px) · <kbd>+</kbd>/<kbd>−</kbd> zoom · <kbd>0</kbd> fit
+            </p>
+        </section>
+
+        <section id="text-section" class="text-section" hidden>
+            <div class="results-header">
+                <h2>Extracted text</h2>
+                <div>
+                    <span id="ocr-status" class="ocr-status"></span>
+                    <button id="copy-text" class="btn" type="button">Copy</button>
+                    <button id="download-text" class="btn" type="button">Download .txt</button>
+                    <button id="clear-text" class="btn" type="button">Clear</button>
+                    <button id="close-text" class="btn btn-ghost" type="button" aria-label="Close">✕</button>
+                </div>
+            </div>
+            <textarea id="ocr-text" class="ocr-text" rows="8" spellcheck="false"
+                placeholder="Extracted text appears here. You can edit it before copying."></textarea>
+        </section>
+
+        <section id="results-section" class="results-section" hidden>
+            <div class="results-header">
+                <h2>Cropped results <span id="results-count" class="badge">0</span></h2>
+                <div>
+                    <select id="pdf-size" aria-label="PDF page size">
+                        <option value="fit">PDF: fit to image</option>
+                        <option value="a4">PDF: A4</option>
+                        <option value="letter">PDF: Letter</option>
+                    </select>
+                    <button id="make-pdf" class="btn btn-primary" type="button">📄 Create PDF</button>
+                    <button id="download-all" class="btn" type="button">Download all (ZIP)</button>
+                    <button id="clear-all" class="btn btn-danger" type="button">Clear all</button>
+                </div>
+            </div>
+            <div class="output" id="output"></div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
